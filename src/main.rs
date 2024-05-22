@@ -50,8 +50,12 @@ async fn main() -> Result<(), reqwest::Error> {
     let id = input("Enter Guild ID: ");
     let guild_url: &'static str = format!("https://discord.com/api/v9/guilds/{id}/channels").leak();
 
-    let body = serde_json::json!({"content": "@everyone"});
-    let create_channel_body = serde_json::json!({"name": "ipig on top"});
+    let name = input("Enter Channel Name: ");
+
+    let message = format!("@everyone {}", input("Enter Message: "));
+
+    let body = serde_json::json!({"content": message});
+    let create_channel_body = serde_json::json!({"name": name});
 
     let client = Client::new();
 
