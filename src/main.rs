@@ -67,14 +67,14 @@ async fn main() -> Result<(), reqwest::Error> {
 
     // delete channels
     println!(" ==== deleting channels ==== ");
-    for channel in channels {
-        delete_channel(client.clone(), channel.get_channel_url()).await;
-    }
-    // join_all(
-    //     channels
-    //         .into_iter()
-    //         .map(|channel| delete_channel(client.clone(), channel.get_channel_url())),
-    // ).await;
+    // for channel in channels {
+    //     delete_channel(client.clone(), channel.get_channel_url()).await;
+    // }
+    join_all(
+        channels
+            .into_iter()
+            .map(|channel| delete_channel(client.clone(), channel.get_channel_url())),
+    ).await;
 
     // create channels
     println!(" ==== creating channels ==== ");
