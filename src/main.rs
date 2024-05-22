@@ -132,7 +132,7 @@ async fn create_channel(
         .text()
         .await?;
     
-
+    println!("{text}");
     Ok(serde_json::from_str(&text).unwrap())
 }
 
