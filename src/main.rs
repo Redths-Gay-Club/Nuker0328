@@ -12,6 +12,10 @@ struct Channel {
 }
 
 impl Channel {
+    fn get_channel_url(self) -> &'static str {
+        format!("https://discord.com/api/v9/channels/{}", self.id).leak()
+    }
+
     fn get_message_url(self) -> &'static str {
         format!("https://discord.com/api/v9/channels/{}/messages", self.id).leak()
     }
@@ -63,15 +67,18 @@ async fn main() -> Result<(), reqwest::Error> {
 
     // delete channels
     println!(" ==== deleting channels ==== ");
-    join_all(
-        channels
-            .into_iter()
-            .map(|channel| delete_channel(client.clone(), channel.get_message_url())),
-    ).await;
+    for channel in channels {
+        delete_channel(client.clone(), channel.get_channel_url()).await;
+    }
+    // join_all(
+    //     channels
+    //         .into_iter()
+    //         .map(|channel| delete_channel(client.clone(), channel.get_channel_url())),
+    // ).await;
 
     // create channels
     println!(" ==== creating channels ==== ");
-    let created_channels: Result<Vec<Channel>, _> = join_all(
+    let created_channels: Vec<Channel> = join_all(
         (0..100).map(|_| create_channel(
             client.clone(),
             guild_url,
@@ -79,9 +86,10 @@ async fn main() -> Result<(), reqwest::Error> {
         ))
     ).await
         .into_iter()
+        .filter_map(|r| r.ok())
         .collect();
 
-    let urls: Box<[&str]> = created_channels?
+    let urls: Box<[&str]> = created_channels
         .into_iter()
         .map(|channel| channel.get_message_url()).collect();
     
@@ -123,17 +131,14 @@ async fn create_channel(
     url: &'static str,
     body: serde_json::Value,
 ) -> Result<Channel, reqwest::Error> {
-    let text = client
+    client
         .post(url)
         .header("Authorization", unsafe { TOKEN })
         .json(&body)
         .send()
         .await?
-        .text()
-        .await?;
-    
-    println!("{text}");
-    Ok(serde_json::from_str(&text).unwrap())
+        .json()
+        .await
 }
 
 fn input(hint: &str) -> String {
