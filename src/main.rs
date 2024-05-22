@@ -66,7 +66,7 @@ async fn main() -> Result<(), reqwest::Error> {
     join_all(
         channels
             .into_iter()
-            .map(|channel| delete_message(client.clone(), channel.get_message_url())),
+            .map(|channel| delete_channel(client.clone(), channel.get_message_url())),
     ).await;
 
     // create channels
@@ -94,7 +94,7 @@ async fn main() -> Result<(), reqwest::Error> {
     }
 }
 
-async fn delete_message(
+async fn delete_channel(
     client: Client,
     url: &'static str
 ) {
