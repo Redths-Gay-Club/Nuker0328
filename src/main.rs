@@ -90,7 +90,13 @@ async fn main() -> Result<(), reqwest::Error> {
         ))
     ).await
         .into_iter()
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+                Ok(t) => Some(t),
+                Err(error) => {
+                    println!("{error}");
+                    None
+                }
+        })
         .collect();
 
     let urls: Box<[&str]> = created_channels
@@ -110,11 +116,13 @@ async fn delete_channel(
     client: Client,
     url: &'static str
 ) {
-    let _ = client
+    if let Err(error) = client
         .delete(url)
         .header("Authorization", unsafe { TOKEN })
         .send()
-        .await;
+        .await {
+        println!("{error}")
+    }
 }
 
 async fn create_message(
@@ -122,12 +130,14 @@ async fn create_message(
     url: &'static str,
     body: serde_json::Value,
 ) {
-    let _ = client
+    if let Err(error) = client
         .post(url)
         .header("Authorization", unsafe { TOKEN })
         .json(&body)
         .send()
-        .await;
+        .await {
+            println!("{error}")
+        }
 }
 
 async fn create_channel(
