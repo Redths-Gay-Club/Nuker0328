@@ -1,7 +1,7 @@
 use ansi_term::Colour;
 use futures::future::join_all;
-use reqwest;
 use reqwest::Client;
+use reqwest::{self, Proxy};
 use serde::Deserialize;
 use std::io;
 use tokio;
@@ -43,6 +43,7 @@ const ART: &str = r#"
 async fn main() -> Result<(), reqwest::Error> {
     println!("{}", Colour::Blue.paint(ART));
     let token = input("Enter Token: ");
+    let proxy = input("Enter proxy: ");
     unsafe {
         TOKEN = format!("Bot {token}").leak();
     }
@@ -57,7 +58,10 @@ async fn main() -> Result<(), reqwest::Error> {
     let body = serde_json::json!({"content": message});
     let create_channel_body = serde_json::json!({"name": name});
 
-    let client = Client::new();
+    let client = Client::builder()
+        .proxy(Proxy::http(proxy).unwrap())
+        .build()
+        .unwrap();
 
     // get channels
     println!(" ==== getting channels ==== ");
@@ -78,31 +82,30 @@ async fn main() -> Result<(), reqwest::Error> {
         channels
             .into_iter()
             .map(|channel| delete_channel(client.clone(), channel.get_channel_url())),
-    ).await;
+    )
+    .await;
 
     // create channels
     println!(" ==== creating channels ==== ");
     let created_channels: Vec<Channel> = join_all(
-        (0..100).map(|_| create_channel(
-            client.clone(),
-            guild_url,
-            create_channel_body.clone()
-        ))
-    ).await
-        .into_iter()
-        .filter_map(|r| match r {
-                Ok(t) => Some(t),
-                Err(error) => {
-                    println!("{error}");
-                    None
-                }
-        })
-        .collect();
+        (0..100).map(|_| create_channel(client.clone(), guild_url, create_channel_body.clone())),
+    )
+    .await
+    .into_iter()
+    .filter_map(|r| match r {
+        Ok(t) => Some(t),
+        Err(error) => {
+            println!("{error}");
+            None
+        }
+    })
+    .collect();
 
     let urls: Box<[&str]> = created_channels
         .into_iter()
-        .map(|channel| channel.get_message_url()).collect();
-    
+        .map(|channel| channel.get_message_url())
+        .collect();
+
     // create messages
     println!(" ==== spamming messages ==== ");
     loop {
@@ -112,32 +115,27 @@ async fn main() -> Result<(), reqwest::Error> {
     }
 }
 
-async fn delete_channel(
-    client: Client,
-    url: &'static str
-) {
+async fn delete_channel(client: Client, url: &'static str) {
     if let Err(error) = client
         .delete(url)
         .header("Authorization", unsafe { TOKEN })
         .send()
-        .await {
+        .await
+    {
         println!("{error}")
     }
 }
 
-async fn create_message(
-    client: Client,
-    url: &'static str,
-    body: serde_json::Value,
-) {
+async fn create_message(client: Client, url: &'static str, body: serde_json::Value) {
     if let Err(error) = client
         .post(url)
         .header("Authorization", unsafe { TOKEN })
         .json(&body)
         .send()
-        .await {
-            println!("{error}")
-        }
+        .await
+    {
+        println!("{error}")
+    }
 }
 
 async fn create_channel(
